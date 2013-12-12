@@ -3,7 +3,7 @@
 function start {
     echo "STARTING JASPER REPORTS" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
     echo "-----> Starting Cart (JBossEWS)" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
-    gear start --cart jbossews-2.0  >> $OPENSHIFT_JASPER_LOG_DIR/install.log
+    gear start --cart jbossews-2.0  >> $OPENSHIFT_JASPER_LOG_DIR/install.log 2>$1 &
     echo "-----> Cart Started (JBossEWS)" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
 }
 
