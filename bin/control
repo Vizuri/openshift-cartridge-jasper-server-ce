@@ -1,0 +1,30 @@
+#!/bin/bash -e
+
+function start {
+    echo "STARTING JASPER REPORTS" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
+    echo "-----> Starting Cart (JBossEWS)" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
+    gear start --cart jbossews-2.0  >> $OPENSHIFT_JASPER_LOG_DIR/install.log
+    echo "-----> Cart Started (JBossEWS)" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
+}
+
+function stop {
+    echo "STOPING JASPER REPORTS" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
+}
+
+function restart {
+    stop
+    start
+}
+
+function catchall {
+    echo ""
+}
+
+case "$1" in
+  start)       start ;;
+  stop)        stop ;;
+  restart)     restart ;;
+  *)           exit 0
+esac
+
+exit 0

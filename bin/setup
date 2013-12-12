@@ -1,0 +1,25 @@
+#!/bin/bash
+# Adapted from https://github.com/kr/heroku-buildpack-go
+#
+
+set -e
+
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+
+mkdir $OPENSHIFT_JASPER_LOG_DIR
+
+# Environment variable definitions
+JRS_NAME="JasperReports Server"
+JRS_EDITION="CE"
+
+#jrs_ver=${JRS_VERSION:-5.5.0}
+
+#JRS_BUILDOMATIC=$JRS_ROOT/jasperreports-server-cp-$jrs_ver-bin/buildomatic export JRS_BUILDOMATIC
+
+
+#echo $JRS_ROOT > $OPENSHIFT_JRS_DIR/env/JRS_ROOT
+#echo $JRS_BUILDOMATIC > $OPENSHIFT_JRS_DIR/env/JRS_BUILDOMATIC
+
+echo "-----> Finished setup" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
+
+exit 0

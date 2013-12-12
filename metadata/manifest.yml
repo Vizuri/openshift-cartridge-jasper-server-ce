@@ -1,0 +1,21 @@
+Name: jasperreports
+Cartridge-Short-Name: JASPERREPORTS
+Display-Name: Jasper Reports
+Version: '5.5'
+Cartridge-Version: 1.0.0
+Cartridge-Vendor: buddahbelly
+Categories:
+- embedded
+Provides:
+- jasperreports-5.5
+- "jasperreports"
+- "jasperreports(version) = 5.5"
+Scaling:
+  Min: 1
+  Max: -1
+Group-Overrides:
+- components:
+  - jasperreports-1.0.0:
+      additional_filesystem_gb: 2
+  - web_framework
+Install-Build-Required: true
