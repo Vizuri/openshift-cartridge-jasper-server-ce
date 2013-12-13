@@ -19,3 +19,4 @@ Group-Overrides:
       additional_filesystem_gb: 2
   - web_framework
 Install-Build-Required: true
+Source-Url: https://github.com/britztopher/openshift-cartridge-jasper-server-ce.git
