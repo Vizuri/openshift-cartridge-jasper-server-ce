@@ -8,7 +8,7 @@ source $OPENSHIFT_CARTRIDGE_SDK_BASH
 echo "-----> Install stage " >> $OPENSHIFT_JASPER_LOG_DIR/install.log
 
 echo "-----> Stopping Cart (JBossEWS)" >> $OPENSHIFT_JASPER_LOG_DIR/install.log
-gear stop --cart jbossews-2.0  >> $OPENSHIFT_JASPER_LOG_DIR/install.log & 
+gear stop --cart jbossews-2.0  >> $OPENSHIFT_JASPER_LOG_DIR/install.log  
 echo "-----> Cart Stopped (JBossEWS) "`date`>> $OPENSHIFT_JASPER_LOG_DIR/install.log
 
 echo "-----> Executing Jasper Install Script">> $OPENSHIFT_JASPER_LOG_DIR/install.log
@@ -19,7 +19,7 @@ echo "-----> Done Running Create JS DB Script "`date`>> $OPENSHIFT_JASPER_LOG_DI
 echo "-----> Done Running Init JS DB Script "`date`>> $OPENSHIFT_JASPER_LOG_DIR/install.log
 ./js-ant import-minimal-ce >> $OPENSHIFT_JASPER_LOG_DIR/install.log 
 echo "-----> Done Running Import Minimal CE Script "`date`>> $OPENSHIFT_JASPER_LOG_DIR/install.log
-./js-ant deploy-webapp-ce >> $OPENSHIFT_JASPER_LOG_DIR/install.log 
+#./js-ant deploy-webapp-ce >> $OPENSHIFT_JASPER_LOG_DIR/install.log 
 echo "-----> Done Running Deploy Webapp CE Script "`date`>> $OPENSHIFT_JASPER_LOG_DIR/install.log
 echo "-----> Finish Jasper Install" >> $OPENSHIFT_JASPER_LOG_DIR/install.log 
 
