@@ -1,0 +1,77 @@
+################################################################################
+#                                                                              #
+# Master Properties File                                                       #
+#                                                                              #
+# Standard usage is to rename this file to default_master.properties.          #
+# It should be placed in the root of the buildomatic directory, like:          #
+#                                                                              #
+#     <js-install>/buildomatic/default_master.properties                       #
+#                                                                              #
+# There is one sample property file for each database type. Sample property    #
+# files are found in:                                                          #
+#                                                                              #
+#     <js-install>/buildomatic/sample_conf                                     #
+#                                                                              #
+################################################################################
+
+################################################################################
+#                                                                              #
+# Installation Settings                                                        #
+#                                                                              #
+# Set values for:                                                              #
+#                                                                              #
+#   1) Application server type                                                 #
+#                                                                              #
+#   2) Path to application server home directory                               #
+#                                                                              #
+#   3) Database location and connection settings                               #
+#                                                                              #
+################################################################################
+
+appServerType = tomcat7
+# appServerType = tomcat5
+# appServerType = tomcat6
+# appServerType = jboss
+# appServerType = jboss-eap-6
+# appServerType = jboss-as-7
+# appServerType = glassfish2
+# appServerType = glassfish3
+# appServerType = skipAppServerCheck
+
+# Tomcat app server root dir
+appServerDir = C:\\Program Files\\Apache Software Foundation\\Tomcat 7.0
+# appServerDir = /home/devuser/apache-tomcat-7.0.26
+# if linux package managed tomcat instance, set two properties below
+# CATALINA_HOME = /usr/share/tomcat6
+# CATALINA_BASE = /var/lib/tomcat6
+
+# Tomcat app server root dir
+appServerDir=<%= ENV['OPENSHIFT_JBOSSEWS_DIR'] %>
+# appServerDir = /home/devuser/apache-tomcat-7.0.26
+# if linux package managed tomcat instance, set two properties below
+# CATALINA_HOME = /usr/share/tomcat6
+# CATALINA_BASE = /var/lib/tomcat6
+
+# Glassfish app server root dir
+# appServerDir = C:\\glassfish-3.1.2
+# appServerDir = /home/devuser/glassfish-3.1.2
+# appServerDir = /usr/bin/glassfish
+
+# database type
+dbType=postgresql
+
+# database location and connection settings
+dbHost=<%= ENV['OPENSHIFT_POSTGRESQL_DB_HOST'] %>
+dbUsername=<%= ENV['OPENSHIFT_POSTGRESQL_DB_USERNAME'] %>
+dbPassword=<%= ENV['OPENSHIFT_POSTGRESQL_DB_PASSWORD'] %>
+
+# additional database parameters
+# (uncomment these if you want non-default settings)
+dbPort=<%= ENV['OPENSHIFT_POSTGRESQL_DB_PORT'] %>
+
+# JasperServer db name, sample db names
+#js.dbName=<%= ENV['OPENSHIFT_APP_NAME'] %>
+#sugarcrm.dbName=sugarcrm
+#foodmart.dbName=foodmart
+
+

@@ -1,0 +1,867 @@
+<!-- =========================================================================== -->
+<!--                                                                             -->
+<!-- Copyright (C) 2005 - 2011 Jaspersoft Corporation. All rights reserved.      -->
+<!-- http://www.jaspersoft.com.                                                  -->
+<!--                                                                             -->
+<!-- Unless you have purchased a commercial license agreement from Jaspersoft,   -->
+<!-- the following license terms apply:                                          -->
+<!--                                                                             -->
+<!-- This program is free software: you can redistribute it and/or modify        -->
+<!-- it under the terms of the GNU Affero General Public License as              -->
+<!-- published by the Free Software Foundation, either version 3 of the          -->
+<!-- License, or (at your option) any later version.                             -->
+<!--                                                                             -->
+<!-- This program is distributed in the hope that it will be useful,             -->
+<!-- but WITHOUT ANY WARRANTY; without even the implied warranty of              -->
+<!-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                -->
+<!-- GNU Affero  General Public License for more details.                        -->
+<!--                                                                             -->
+<!-- You should have received a copy of the GNU Affero General Public  License   -->
+<!-- along with this program. If not, see <http://www.gnu.org/licenses/>.        -->
+<!--                                                                             -->
+<!-- =========================================================================== -->
+
+<project name="source-dist">
+
+  <!-- ========================================================================= -->
+  <!--                                                                           -->
+  <!-- This file holds source distribution related macros and targets            -->
+  <!--                                                                           -->
+  <!-- It also has utility macros used by the Continuous Integration/Source      -->
+  <!-- Build Production processes                                                -->
+  <!--                                                                           -->
+  <!-- ========================================================================= -->
+
+  <!-- ========================================================================= -->
+  <!-- Instructions for Source Packaging:                                        -->
+  <!--                                                                           -->
+  <!-- 1a) The way I have been approaching this is to create a tag off of        -->
+  <!--     the branch or trunk that represents the specific release. It is       -->
+  <!--     always required of course to create a release tag.                    -->
+  <!--                                                                           -->
+  <!--     Then, I checkout the release tag and go the the tags/<ce>/buildomatic -->
+  <!--     folder and create a default_master.properties in that location.       -->
+  <!--                                                                           -->
+  <!--                                                                           -->
+  <!-- 1) In your default_master.properties file, set (for instance):            -->
+  <!--                                                                           -->
+  <!-- The js-path and js-pro-path can point to trunk. Or more normally you will -->
+  <!-- be building from a tag. The output files will get generated into the      -->
+  <!-- buildomatic/dist folder. It is simplest to have the source paths and      -->
+  <!-- the js-branch and js-pro-branch props point to the source that you want   -->
+  <!-- and do the tag name that you want. Having the js-branch names set to the  -->
+  <!-- tags that you want is required. The name of the property is "js-branch"   --> 
+  <!-- but it can point to a tag as shown in the example below. The operations   --> 
+  <!-- in this ant script will check out brand new source (actually it will do   -->
+  <!-- and export so that there will not be .svn files in the source code).      -->
+  <!-- The new source will be put into the buildomatic/dist folder               -->
+  <!--                                                                           -->
+  <!--                                                                           -->
+  <!--   svn-user = devuser                                                      -->
+  <!--   svnServerHost = <svn server name>  (use default)                        -->
+  <!--                                                                           -->
+  <!-- Example for trunk:                                                        -->
+  <!--                                                                           -->
+  <!--   js-path = /home/devuser/js-builds/trunk/jasperserver        (trunk)     -->
+  <!--   js-pro-path /home/devuser/js-builds/trunk/jasperserver-pro  (trunk)     -->
+  <!--                                                                           -->
+  <!--   js-branch = trunk     (looks a little odd but this is correct setup)    -->
+  <!--   js-pro-branch = trunk (looks a little odd but this is correct setup)    -->
+  <!--   # repo-rev = 14491                                                      -->
+  <!--                                                                           -->
+  <!-- Example for tag:                                                          -->
+  <!--                                                                           -->
+  <!--   js-path = /home/devuser/js-builds/tags/js-for-pro-4.2.0                 -->
+  <!--   js-pro-path /home/devuser/js-builds/tags/js-pro-4.2.0                   -->
+  <!--                                                                           -->
+  <!--   js-branch = tags/js-for-pro-4.2.0        (set this to the tag)          -->
+  <!--   js-pro-branch = tags/js-pro-4.2.0        (set this to the tag)          -->
+  <!--   # repo-rev = 14491                     (leave commented out. Unless you --> 
+  <!--                                           really don't want head files)   -->
+  <!--                                                                           -->
+  <!-- 2) In this current xml file, set the following property:                  -->
+  <!--                                                                           -->
+  <!--   rel.version                                                             -->
+  <!--       - will be used to do special set up of the ji-license jar so        -->
+  <!--         that a source build of the license source code is not required    -->
+  <!--         and so that we don't need to include our license source code.     -->
+  <!--                                                                           -->
+  <!--       - The ji-license-<ver>.jar will be added to the jasperserver-repo   -->
+  <!--         for customers only. And the main pro pom.xml will be altered      -->
+  <!--         so that the license module will not be included in the build      -->
+  <!--                                                                           -->
+  <!--       - This is pro-only                                                  -->
+  <!--                                                                           -->
+  <!-- 3) You must copy the most current <pro>/pom.xml to the following location -->
+  <!--      ${js-pro-path}/buildomatic-additional/                               -->
+  <!--         install_resources/extra-tmp-file/temp-root-pom.xml                -->
+  <!--    - js-pro-path is normally set to trunk source.                         -->
+  <!--    - And the pom file temp-root-pom.xml should be altered to not build    -->
+  <!--      the license folder and to add the ji-license-<ver>.jar dependency.   -->
+  <!--      - Comment out the building of the license module.                    -->
+  <!--      - Also, add a dependency to ji-license jar. Make sure version        -->
+  <!--        number is correct.                                                 -->
+  <!--      - This is pro-only                                                   -->
+  <!--                                                                           -->
+  <!-- 4) There is a required manual step for handle the license java code       -->
+  <!--                                                                           -->
+  <!--    We don't want to give the plain .java files for our LicenseManagement  -->
+  <!--    code. So, you will need to create a modified version of the            -->
+  <!--    main pom.xml file so that it will not build the License code           -->
+  <!--    and will instead take the already generated jar file                   -->
+  <!--    - This is pro-only                                                     -->
+  <!--                                                                           -->
+  <!--    a) take the most current pro root pom.xml file and copy it to:         -->
+  <!--       ${js-pro-path}/buildomatic-additional/install_resources/            -->
+  <!--                           extra-tmp-file/temp-root-pom.xml-tmp            -->
+  <!--                                                                           -->
+  <!--    b) Modify this file so that it does not compile the license folder     -->
+  <!--       Modify so that it specifies a dependency to js-license-<ver>.jar    -->
+  <!--                                                                           -->
+  <!--       ADD COMMENT: - for src build comment out license module -           -->
+  <!--       COMMENT OUT: - <module>license</module> -                           -->
+  <!--                                                                           -->
+  <!--    d) For an example, see the previously released source code             -->
+  <!--                                                                           -->
+  <!--                                                                           -->
+  <!-- 5) Run the following commands to gen CE then Pro code:                    -->
+  <!--                                                                           -->
+  <!--    ant clean-dist                                                         -->
+  <!--    ant make-source-export-dist-ce-all                                     -->
+  <!--    ant make-source-export-dist-pro-all                                    -->
+  <!--                                                                           -->
+  <!--                                                                           -->
+  <!-- 6) Type: ant help-dist                                                    -->
+  <!--                                                                           -->
+  <!--    For help with available targets                                        -->
+  <!--                                                                           -->
+  <!--                                                                           -->
+  <!-- ========================================================================= -->
+
+  <!-- ========================================================================= -->
+  <!-- LOG:                                                                      -->
+  <!--   2011-07-01                                                              -->
+  <!--   - Added tasks for Continuous Integration (CI)                           -->
+  <!--   - So far there are only a couple targets. If there are more can make    -->
+  <!--     a separate file for CI tasks.                                         -->
+  <!--                                                                           -->
+  <!--   2011-10-25                                                              -->
+  <!--   - Added target that auto-add artifact to jasperserver-repo              -->
+  <!--                                                                           -->
+  <!--   2011-10-28                                                              -->
+  <!--   - Added targets to handle collection of js-catalog files                -->
+  <!--   - This supports CI/Release work                                         -->
+  <!--                                                                           -->
+  <!--   2012-02-23                                                              -->
+  <!--   - Adding target to support building big data connectors                 -->
+  <!--                                                                           -->
+  <!-- ========================================================================= -->
+
+
+  <!-- ========================================================================= -->
+  <!-- TODO:                                                                     --> 
+  <!-- 
+       1) add auto-zipping into final package name:
+          - jasperreports-server-<ver>-src.zip 
+          - jasperreports-server-cp-<ver>-src.zip 
+
+       2) DONE copy sample_conf/source/*.props one folder up for src 
+          - so that sample_conf and sample_conf/source are same files
+  
+       3) DONE copy the SBG into the root folder
+          - this is handy for the user
+
+       js-repo cleanup items for Community (CE) source code: 
+
+       com/fusioncharts                                 (holds pro jasperreports)
+       com/jaspersoft                                   (holds pro jasperreports)
+       com/jaspersoft/jasperreports/jasperreports-pro   (already deleted from above)
+       jproductivity                                    (protection)
+       jasperreports                                    (remove. these come from net/sf now)
+       docflex                                          (pro product)
+       flexdoc                                          (MS public license)
+       ibm                                              (drivers)
+       mondrian/mondrian/3.1.1.12687-Jaspersoft         (old and big)
+       mondrian/workbench-dist                          (big)
+       jaspersoft/ji-pro/ji-jpivot-ui/ji-jpivot-war     (remove old versions)
+       ibm                                              (drivers)
+       oracle                                           (drivers)
+       sqlserver                                        (drivers)
+  -->
+  <!-- ========================================================================= -->
+
+  <property name="rel.version" value="4.7.0"/>  <!-- used for install version of ji-license -->
+  <property name="mydist" value="${basedir}/dist/jasperreports-server-${rel.version}-src"/>
+  <property name="svnServerHost" value="falcon.jaspersoft.com"/>
+
+  <target name="clean-dist"
+          description="Clear the contents of the buildomatic/dist folder"
+          depends="gen-config, print-dist-properties">
+    <delete includeemptydirs="true" dir="${basedir}/dist"/>
+  </target>
+
+  <target name="help-dist"
+          description="List out help of target names"
+          depends="gen-config">
+          <echo> 
+          Source Creation:  
+            clean-dist
+            make-source-export-dist-pro-all
+            make-source-export-dist-pro
+            make-source-export-dist-ce
+            make-source-export-dist-ce-all
+            make-source-export-dist-repo
+            process-license-folder 
+
+          Deploy a JAR to jasperserver-repo:
+            deploy-to-jasperserver-repo         (need to set props in default_master.properties first)
+
+          Continuous Integration Support Targets:
+
+            CI Support to Collect js-catalog files: 
+              ci-copy-js-catalogs-ce
+              ci-copy-js-catalogs-pro
+
+            CI Support for Special Handling of the MySQL JDBC driver:
+              ci-copy-jdbc-drivers
+              ci-remove-jdbc-drivers
+
+            CI Support for Building Big Data Connectors:
+              ci-build-connectors               (assumes src is in a standard location)
+              ci-update-connectors-src 
+          </echo>
+  </target>
+
+  <target name="print-dist-properties"
+          description="List out key property values"
+          depends="gen-config">
+          <echo> 
+            mydist = ${mydist} 
+            rel.version = ${rel.version}
+            svnServerHost = ${svnServerHost}
+            js-branch = ${js-branch}
+            js-pro-branch = ${js-pro-branch}
+            repo-rev = ${repo-rev} (note: ignored by default)
+          </echo>
+  </target>
+
+  <target name="chmod-folder"
+          description="set linux file and folder permissions"
+          depends="gen-config">
+
+    <exec executable="sh" dir="${basedir}/dist">
+      <arg value="${js-path}/buildomatic/install_resources/extra-files/execute-local-chmod.sh"/>
+    </exec>
+  </target>
+
+  <target name="zip-folder"
+          description="zip up the src package"
+          depends="gen-config">
+
+    <exec executable="sh" dir="${basedir}/dist">
+      <arg value="${js-path}/buildomatic/install_resources/extra-files/execute-local-zip.sh"/>
+      <arg value="${mydist}.zip"/>
+      <arg value="${mydist}"/>
+    </exec>
+
+    <!-- do a final chmod to set the zip file to 755 permissions --> 
+    <exec executable="sh" dir="${basedir}/dist">
+      <arg value="${js-path}/buildomatic/install_resources/extra-files/execute-local-chmod.sh"/>
+    </exec>
+  </target>
+
+  <!-- <property name="mydist" value="${basedir}/dist/jasperreports-server-${rel.version}-src"/> -->
+
+  <target name="make-source-export-dist-pro-all"
+          description="Do export of js-ce src, js-pro src, js-repo src, and apache-ant"
+          depends="gen-config, clean-dist, make-source-export-dist-ce, make-source-export-dist-pro, 
+                   make-source-export-dist-repo, process-license-folder, chmod-folder, print-dist-properties">
+
+  </target>
+
+  <target name="make-source-export-dist-ce-all"
+          description="Do export of js-ce src, apache-ant, js-repo src, and remove pro-only js-repo files"
+          depends="gen-config, clean-dist, print-dist-properties, make-source-export-dist-ce, 
+                   make-source-export-dist-repo, delete-from-repo-for-ce, chmod-folder, zip-folder, print-dist-properties">
+
+  </target>
+
+  <target name="make-source-export-dist-pro"
+          description="Do export of js-pro src"
+          depends="gen-config">
+    <runsvn>
+      <arg value="export"/>
+      <arg value="svn+ssh://${svn-user}@${svnServerHost}/jasperserver-pro/${js-pro-branch}"/>
+      <arg value="${mydist}/jasperserver-pro"/>
+    </runsvn>
+
+  </target>
+
+  <target name="make-source-export-dist-ce"
+          description="Do export of js-ce src and apache-ant"
+          depends="gen-config, print-dist-properties">
+
+    <mkdir dir="${mydist}"/>
+
+    <runsvn>
+      <arg value="export"/>
+      <arg value="svn+ssh://${svn-user}@${svnServerHost}/eng/installer/trunk/applications/apache-ant/apache-ant.zip"/>
+      <arg value="${mydist}/apache-ant.zip"/>
+    </runsvn>
+
+    <unzip dest="${mydist}"
+       src="${mydist}/apache-ant.zip"/>
+
+    <delete file="${mydist}/apache-ant.zip"/>
+
+    <runsvn>
+      <arg value="export"/>
+      <arg value="svn+ssh://${svn-user}@${svnServerHost}/jasperserver/${js-branch}"/>
+      <arg value="${mydist}/jasperserver"/>
+    </runsvn>
+
+    <!-- Tweek buildomatic ce sample_conf files: -->
+    <!-- Put the buildo/conf_source/source/*.properties on top of the buildo/sample_conf files -->
+    <!-- The ones in "source" are specific for source building and users can miss them if they -->
+    <!-- don't copy them from the correct location. So make them the same in both locations    -->
+
+    <copy toDir="${mydist}/jasperserver/buildomatic/sample_conf" overwrite="true">
+      <fileset dir="${mydist}/jasperserver/buildomatic/sample_conf/source"/>
+    </copy>
+
+  </target>
+
+  <target name="make-source-export-dist-repo"
+          description="Do export of jasperserver-repo"
+          depends="gen-config">
+    <!-- todo: figure out best way to handle repo-rev. Don't normally need it -->
+    <runsvn>
+      <arg value="export"/>
+      <arg value="svn+ssh://${svn-user}@${svnServerHost}/jasperserver-repo"/>
+      <arg value="${mydist}/jasperserver-repo"/>
+    </runsvn>
+
+  </target>
+
+  <!-- todo: remove the docflex items from js-repo also for pro release --> 
+  <target name="delete-from-repo-for-ce"
+          description="Get rid of Pro-only files from js-repo for CE"
+          depends="gen-config">
+
+    <delete includeemptydirs="true">
+      <fileset dir="${mydist}/jasperserver-repo" includes="com/jaspersoft/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="com/fusioncharts/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="docflex/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="flexdock/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="ibm/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="jasperreports/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="jproductivity/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="mondrian/mondrian/3.1*/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="mondrian/workbench/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="mondrian/workbench-dist/**"/>
+      <!-- get rid of old jasperreports versions -->
+      <fileset dir="${mydist}/jasperserver-repo" includes="net/sf/jasperreports/4.0*/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="net/sf/jasperreports/4.1*/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="net/sf/jasperreports/4.5*/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="net/sf/jasperreports/4.6*/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="net/sf/jasperreports/*-SNAPSHOT/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="oracle/**"/>
+      <fileset dir="${mydist}/jasperserver-repo" includes="sqlserver/**"/>
+    </delete>
+
+  </target>
+
+  <target name="process-license-folder"
+          description="For JS Pro 4.0 the license code needs special handling until a new license svn project is setup"
+          depends="gen-config">
+
+    <!-- Put a different root pom.xml file in place                  -->
+    <!-- Get rid of license java source code                         -->
+    <!-- Get rid of license files (except eval license)              -->
+    <!-- Rename license file to jasperserver.license                 -->
+    <!-- deploy the js-license.jar to the jasperserver-repo location -->
+    <!-- Copy pro buildomatic files on top of ce buildomatic files   -->
+    <!-- Get rid of CE docs contents (since only need pro ones)      -->
+
+    <echo> WARNING: copying temp root pom.xml file </echo>
+    <echo> WARNING: copying temp root pom.xml file </echo>
+    <echo> WARNING: copying temp root pom.xml file </echo>
+    <echo> </echo>
+    <echo>   Need to make sure this is most current pom file: </echo>
+    <echo> </echo>
+    <echo>     buildomatic-additional/install_resources/extra-tmp-file/temp-root-pom.xml-tmp  </echo>
+    <echo> </echo>
+    <echo> WARNING: copying temp root pom.xml file </echo>
+    <echo> WARNING: copying temp root pom.xml file </echo>
+    <echo> WARNING: copying temp root pom.xml file </echo>
+    <echo> </echo>
+
+    <!-- bug 21985: for this file copying *from* js-pro-path because checked in after GA release -->
+    <copy file="${js-pro-path}/buildomatic-additional/install_resources/extra-tmp-file/temp-root-pom.xml-tmp" 
+          tofile="${mydist}/jasperserver-pro/pom.xml" overwrite="true"/>
+
+    <delete includeemptydirs="true" verbose="true" 
+            dir="${mydist}/jasperserver-pro/license/src/main/java/com"/>
+
+    <!-- will delete all files except the eval license file that we want to keep -->
+    <delete includeemptydirs="true" verbose="true">
+      <fileset dir="${mydist}/jasperserver-pro/license/src/main/resources">
+        <exclude name="JS_BI_evaluation_enterprise.license"/>
+      </fileset>
+    </delete>
+
+    <move file="${mydist}/jasperserver-pro/license/src/main/resources/JS_BI_evaluation_enterprise.license" 
+          tofile="${mydist}/jasperserver-pro/license/src/main/resources/jasperserver.license" overwrite="true"/>
+
+    <!-- now deploy the ji-license.jar to the dist/jasperserver-repo location -->
+    <exec executable="${maven}" failonerror="true">
+      <arg value="deploy:deploy-file"/>
+      <arg value="-Dfile=${js-pro-path}/license/target/ji-license-${rel.version}.jar"/>
+      <arg value="-Durl=file://${mydist}/jasperserver-repo"/>
+      <arg value="-DgroupId=jaspersoft.ji-pro"/>
+      <arg value="-DartifactId=ji-license"/>
+      <arg value="-Dversion=${rel.version}"/>
+      <arg value="-Dpackaging=jar"/>
+      <arg value="-DgeneratePom"/>
+      <arg value="-DcreateChecksum=true"/>
+    </exec>
+
+    <!-- copy the pro buildomatic files -->
+    <copy toDir="${mydist}/jasperserver/buildomatic" overwrite="true">
+      <fileset dir="${mydist}/jasperserver-pro/buildomatic-additional"/>
+    </copy>
+
+    <!-- for Pro code: -->
+    <!-- Put the buildo/conf_source/source/*.properties on top of the buildo/sample_conf files -->
+    <!-- The ones in "source" are specific for source building and users can miss them if they -->
+    <!-- don't copy them from the correct location. So make them the same in both locations    -->
+    <!-- And do this after the files above from buildomatic-additional have been copied.       -->
+
+    <copy toDir="${mydist}/jasperserver/buildomatic/sample_conf" overwrite="true">
+      <fileset dir="${mydist}/jasperserver/buildomatic/sample_conf/source"/>
+    </copy>
+
+    <!-- copy the Source Build Guide to the root of the src package -->
+    <copy file="${mydist}/jasperserver-pro/docs/JasperReports-Server-Source-Build-Guide.pdf" 
+          toDir="${mydist}" overwrite="true"/>
+
+    <delete includeemptydirs="true" verbose="true" 
+            dir="${mydist}/jasperserver/docs"/>
+
+  </target>
+
+  <!-- =============================================================================== -->
+  <!-- ci-update-connectors-src                                                        -->
+  <!--                                                                                 -->
+  <!-- Update connectors svn source.                                                   -->
+  <!-- Source is assumed to be at this location:                                       -->
+  <!--   - /home/devuser/js-connectors/trunk                                           -->
+  <!--   - can override this location with -Dci.connBaseDir=<my-dir-path>              -->
+  <!-- =============================================================================== -->
+
+  <target name="ci-update-connectors-src"
+          depends="init-source-paths"
+          description="Continuous Integration: Update source for the Big Data Connectors">
+
+    <property name="ci.connBaseDir" value="/home/devuser/js-connectors/trunk"/>
+       
+    <runsvn dir="${ci.connBaseDir}">
+      <arg value="update"/>
+    </runsvn>
+
+  </target>
+
+
+  <!-- =============================================================================== -->
+  <!-- ci-build-connectors                                                             -->
+  <!--                                                                                 -->
+  <!-- Build the Big Data Connectors source.                                           -->
+  <!-- Source is assumed to be at this location:                                       -->
+  <!--   - /home/devuser/js-connectors/trunk                                           -->
+  <!--   - can override this location with -Dci.connBaseDir=<my-dir-path>              -->
+  <!-- =============================================================================== -->
+
+  <target name="ci-build-connectors"
+          depends="init-source-paths"
+          description="Continuous Integration: Build the Big Data Connectors src">
+
+    <property name="ci.connBaseDir" value="/home/devuser/js-connectors/trunk"/>
+
+    <echo message=" "/>
+    <echo message="ci-build-connectors: "/>
+    <echo message="  ci.connBaseDir =${ci.connBaseDir}"/>
+    <echo message=" "/>
+
+    <runmaven dir="${ci.connBaseDir}">
+      <arg value="clean"/>
+      <arg value="install"/>
+    </runmaven>
+
+  </target>
+
+  <!-- =============================================================================== -->
+  <!-- ci-copy-js-catalogs-ce                                                          -->
+  <!--                                                                                 -->
+  <!-- Check for js-catalog files that are generated as part of the build steps.       -->
+  <!-- If the js-catalog file exists, copy it to the final location in buildomatic.    -->
+  <!-- The js-catalog files in the buildomatic structure are used for customer         -->
+  <!-- installation.                                                                   -->
+  <!-- =============================================================================== -->
+
+  <target name="ci-copy-js-catalogs-ce"
+          depends="init-source-paths"
+          description="Continuous Integration: copy js-catalog files to final locations for CE">
+
+    <!-- set default value for ceBaseDir -->
+    <property name="ci.ceBaseDir" value="/home/devuser/js-builds/trunk/jasperserver"/>
+
+    <echo message=" "/>
+    <echo message="ci-copy-js-catalogs-ce: "/>
+    <echo message="  ci.ceBaseDir=${ci.ceBaseDir}"/>
+    <echo message=" "/>
+
+    <if>
+      <available type="dir" file="${ci.ceBaseDir}"/>
+      <then>
+        <echo message="ci-copy-js-catalogs-ce: CE base folder exists: start copying"/>
+        <!-- try postgresql files -->
+        <if>
+          <available type="file" file="${ci.ceBaseDir}/production-tests/target/js-catalog-postgresql-ce.zip"/>
+          <then>
+            <copy file="${ci.ceBaseDir}/production-tests/target/js-catalog-postgresql-ce.zip"
+                  toFile="${ci.ceBaseDir}/buildomatic/install_resources/export/js-catalog-postgresql-ce.zip" overwrite="true"/>
+          </then>
+        </if>
+        <if>
+          <available type="file" file="${ci.ceBaseDir}/production-tests/target/js-catalog-postgresql-minimal-ce.zip"/>
+          <then>
+            <!-- note: ce minimal file is not dbType specific -->
+            <copy file="${ci.ceBaseDir}/production-tests/target/js-catalog-postgresql-minimal-ce.zip"
+                  toFile="${ci.ceBaseDir}/buildomatic/install_resources/export/js-catalog-minimal-ce.zip" overwrite="true"/>
+          </then>
+        </if>
+        <!-- try mysql files -->
+        <if>
+          <available type="file" file="${ci.ceBaseDir}/production-tests/target/js-catalog-mysql-ce.zip"/>
+          <then>
+            <copy file="${ci.ceBaseDir}/production-tests/target/js-catalog-mysql-ce.zip"
+                  toFile="${ci.ceBaseDir}/buildomatic/install_resources/export/js-catalog-mysql-ce.zip" overwrite="true"/>
+          </then>
+        </if>
+        <if>
+          <available type="file" file="${ci.ceBaseDir}/production-tests/target/js-catalog-mysql-minimal-ce.zip"/>
+          <then>
+            <!-- note: ce minimal file is not dbType specific -->
+            <copy file="${ci.ceBaseDir}/production-tests/target/js-catalog-mysql-minimal-ce.zip"
+                  toFile="${ci.ceBaseDir}/buildomatic/install_resources/export/js-catalog-minimal-ce.zip" overwrite="true"/>
+          </then>
+        </if>
+      </then>
+      <else>
+        <echo message="ci-copy-js-catalogs-ce: CE base folder DOES NOT exist: ${ci.ceBaseDir}"/>
+        <fail message="${ci.ceBaseDir}: not found"/>
+      </else>
+    </if>
+  </target>
+
+  <!-- =============================================================================== -->
+  <!-- ci-copy-js-catalogs-pro                                                         -->
+  <!-- Check for js-catalog files that are generated as part of the build steps        -->
+  <!-- If the js-catalog file exists, copy it to the final location in buildomatic     -->
+  <!-- The js-catalog files in the buildomatic structure are used for customer         -->
+  <!-- installation.                                                                   -->
+  <!-- If the pro source folder does not exist, then it will be skipped                -->
+  <!--                                                                                 -->
+  <!-- Usage:                                                                          -->
+  <!--                                                                                 -->
+  <!--   In your default_master.properties file, you can set                           -->
+  <!--   ci.copyBaseDir so that is matches the path to your source code                -->
+  <!--   default=/home/devuser/js-builds/trunk                                         -->
+  <!--   For example to override the property so that you can have a Win path          -->
+  <!--   ci.copyBaseDir=C:/js-builds/trunk                                             -->
+  <!-- =============================================================================== -->
+
+  <!-- =============================================================================== -->
+  <!-- todo:                                                                           -->
+  <!--   - Should enhance to take list of folders/dbType to process???                 -->
+  <!--   - This way we can skip over folders/dbTypes already processed on a            -->
+  <!--     different server                                                            -->
+  <!-- =============================================================================== -->
+
+  <target name="ci-copy-js-catalogs-pro"
+          depends="init-source-paths"
+          description="Continuous Integration: copy js-catalog files to final locations for Pro">
+
+    <!-- set default value for proBaseDir -->
+    <property name="ci.copyBaseDir" value="/home/devuser/js-builds/trunk"/>
+
+    <echo message=" "/>
+    <echo message="ci-copy-js-catalogs-pro: "/>
+    <echo message="  ci.copyBaseDir=${ci.copyBaseDir}"/>
+    <echo message=" "/>
+
+    <!-- start checking and copying for each existing platform/dbType set of js-catalog files -->
+
+    <copy-js-catalog-file copyBaseDir="${ci.copyBaseDir}"  copyDbType="postgresql" />
+
+    <copy-js-catalog-file copyBaseDir="${ci.copyBaseDir}"  copyDbType="mysql" />
+
+    <copy-js-catalog-file copyBaseDir="${ci.copyBaseDir}"  copyDbType="oracle" />
+
+    <copy-js-catalog-file copyBaseDir="${ci.copyBaseDir}"  copyDbType="sqlserver" />
+
+    <copy-js-catalog-file copyBaseDir="${ci.copyBaseDir}"  copyDbType="db2" />
+
+  </target>
+
+  <!-- =============================================================================== -->
+  <!-- macrodef: copy-js-catalog-file                                                  -->
+  <!-- Check to see if pro source folder exists for the specific database type.        -->
+  <!-- If it exists and there are js-catalog files in place, then copy them.           -->
+  <!-- If js-catalog file or pro source folder does not exist then simply skip.        -->
+  <!-- Note: Note that for postgresql and mysql the target copy location is the ce     -->
+  <!-- buildomatic tree, not the pro buildomatic-additional tree as it is for oracle   -->
+  <!-- sqlserver, or db2.                                                              -->
+  <!-- =============================================================================== -->
+  <macrodef name="copy-js-catalog-file">
+    <attribute name="copyBaseDir"/>
+    <attribute name="copyDbType"/>
+    <sequential>
+
+      <property name="scrNm" value="copy-js-catalog-file"/>
+
+      <if>
+        <available type="dir" file="@{copyBaseDir}/jasperserver-pro-@{copyDbType}"/>
+        <then>
+          <echo message="${scrNm}: Pro folder IS FOUND, folder=@{copyBaseDir}/jasperserver-pro-@{copyDbType}"/>
+          <if>
+            <available type="file"
+                       file="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-pro.zip"/>
+            <then>
+              <echo message="${scrNm}: File exists: @{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-pro.zip"/>
+              <if>
+                <or>
+                  <equals arg1="@{copyDbType}" arg2="mysql" />
+                  <equals arg1="@{copyDbType}" arg2="postgresql" />
+                 </or>
+                <then>
+                  <!-- all postgresql and mysql install files (for both pro and ce) live in the ce buildomatic tree -->
+                  <echo message="${scrNm}: dbType is postgresql or mysql, copy to CE tree"/>
+                  <copy file="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-pro.zip"
+                        toFile="@{copyBaseDir}/jasperserver/buildomatic/install_resources/export/js-catalog-@{copyDbType}-pro.zip"
+                        overwrite="true"/>
+                </then>
+                <else>
+                  <copy file="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-pro.zip"
+                        toFile="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/buildomatic-additional/install_resources/export/js-catalog-@{copyDbType}-pro.zip"
+                        overwrite="true"/>
+                </else>
+              </if>
+            </then>
+          </if>
+          <if>
+            <available type="file" file="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-minimal-pro.zip"/>
+            <then>
+              <echo message="${scrNm}: File exists: @{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-minimal-pro.zip"/>
+              <if>
+                <or>
+                  <equals arg1="@{copyDbType}" arg2="mysql" />
+                  <equals arg1="@{copyDbType}" arg2="postgresql" />
+                </or>
+                <then>
+                  <!-- all postgresql and mysql install files (for both pro and ce) live in the ce buildomatic tree -->
+                  <echo message="${scrNm}: dbType is postgresql or mysql, copy to CE tree"/>
+                  <copy file="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-minimal-pro.zip"
+                        toFile="@{copyBaseDir}/jasperserver/buildomatic/install_resources/export/js-catalog-@{copyDbType}-minimal-pro.zip"
+                        overwrite="true"/>
+                </then>
+                <else>
+                  <copy file="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/production-tests/target/js-catalog-@{copyDbType}-minimal-pro.zip"
+                        toFile="@{copyBaseDir}/jasperserver-pro-@{copyDbType}/buildomatic-additional/install_resources/export/js-catalog-@{copyDbType}-minimal-pro.zip"
+                        overwrite="true"/>
+                </else>
+              </if>
+            </then>
+          </if>
+        </then>
+        <else>
+          <echo message="${scrNm}: Pro folder NOT FOUND, folder=@{copyBaseDir}/jasperserver-pro-@{copyDbType}"/>
+        </else>
+      </if>
+    </sequential>
+  </macrodef>
+
+  <!-- =============================================================================== -->
+  <!-- deploy-to-jasperserver-repo                                                     -->
+  <!--                                                                                 -->
+  <!-- Sample target for maven deploy of a component to jasperserver-repo              -->
+  <!--                                                                                 -->
+  <!--  Usage: manually update the target below and add in the information             -->
+  <!--         appropriate for your component.                                         -->
+  <!--                                                                                 -->
+  <!--  Options:                                                                       -->
+  <!--                                                                                 -->
+  <!--    deploy:deploy-file    Tells maven to carry out deploy                        -->
+  <!--    file                  The jar file you want to deploy                        -->
+  <!--    url                   The file system base maven repository                  -->
+  <!--    groupId               GroupId of component                                   -->
+  <!--    artifactId            ArtifactId of component                                -->
+  <!--    version               Version of component                                   -->
+  <!--    packaging             Usually set to "jar" will get used in generated pom    -->
+  <!--    generatePom           Tells maven to generate a pom                          -->
+  <!--    createChecksum        Tells maven to create md5 and sha checksums            -->
+  <!--    sources               Will include source zip if specified                   -->
+  <!--                                                                                 -->
+  <!-- =============================================================================== -->
+
+  <!-- =============================================================================== -->
+  <!-- Copy/paste to a default_master.properties file (Example):                       -->
+  <!--                                                                                 -->
+  <!-- deploy.fileValue=C:/js-builds/trunk/TEMP/js-hive-datasource-0.8.0.jar           -->
+  <!-- deploy.urlValue=C:/js-builds/trunk/jasperserver-repo                            -->
+  <!-- deploy.groupIdValue=com.jaspersoft.hadoop.hive                                  -->
+  <!-- deploy.artifactIdValue=js-hive-datasource                                       -->
+  <!-- deploy.versionValue=0.8.0                                                       -->
+  <!--                                                                                 -->
+  <!-- =============================================================================== -->
+
+  <target name="deploy-to-jasperserver-repo"
+          depends="init-source-paths"
+          description="This is a sample target for deploying a component to a file system based maven repository">
+   
+    <!-- you can set these properties in your default_master.properties -->
+    <!-- which will use your values                                     -->
+    <property name="deploy.fileValue" value="myComponent-1.0.jar"/>
+    <property name="deploy.urlValue" value="C:/js-builds/trunk/jasperserver-repo"/>
+    <property name="deploy.groupIdValue" value="com.jaspersoft"/>
+    <property name="deploy.artifactIdValue" value="myComponent"/>
+    <property name="deploy.versionValue" value="1.0"/>
+
+    <echo message=" "/>
+    <echo message="Property values used for deploy:"/>
+    <echo message="  deploy.fileValue=${deploy.fileValue}"/>
+    <echo message="  deploy.urlValue=${deploy.urlValue}"/>
+    <echo message="  deploy.groupIdValue=${deploy.groupIdValue}"/>
+    <echo message="  deploy.artifactIdValue=${deploy.artifactIdValue}"/>
+    <echo message="  deploy.versionValue=${deploy.versionValue}"/>
+    <echo message=" "/>
+
+    <exec executable="${maven}" failonerror="true">
+      <arg value="deploy:deploy-file"/>
+      <arg value="-Dfile=${deploy.fileValue}"/>
+      <arg value="-Durl=file:${deploy.urlValue}"/>
+      <arg value="-DgroupId=${deploy.groupIdValue}"/>
+      <arg value="-DartifactId=${deploy.artifactIdValue}"/>
+      <arg value="-Dversion=${deploy.versionValue}"/>
+      <arg value="-Dpackaging=jar"/>
+      <arg value="-DgeneratePom=true"/>
+      <arg value="-DcreateChecksum=true"/>
+      <!-- <arg value="-Dsources=myComponent-1.0-src.zip"/> -->
+      <!-- <arg value="-DpomFile=aPomFile.pom"/> -->
+    </exec>
+
+  </target>
+
+  <!-- =============================================================================== -->
+  <!-- Targets/Macros for Continuous Integration Tasks                                 -->
+  <!--   CI servers host the processes that automatically build our code with each     -->
+  <!--   svn checkin. Also, these processes build the release packages that go to QA   -->
+  <!--   and eventually our customers                                                  -->
+  <!--                                                                                 -->
+  <!--   2011-07-01:                                                                   -->
+  <!--     Removing jdbc drivers from our source code. But our CI processes need       -->
+  <!--     these drivers. Setup targets and macros to add and remove drivers           -->
+  <!--                                                                                 -->
+  <!-- =============================================================================== -->
+
+  <target name="ci-copy-jdbc-drivers"
+          depends="init-source-paths"
+          description="Continuous Integration: copy ce and pro jdbc drivers to buildomatic">
+
+    <ci-set-properties/>
+
+    <copy file="${internal-drivers-path}/mysql/mysql-connector-java-${mysqlVer}.jar" 
+          toDir="${buildBase}/conf_source/db/mysql/jdbc" overwrite="true"/>
+
+    <!-- 2011-07-08: it was decided to keep the commercial drivers for now -->
+    <!-- comment out 
+    <copy file="${internal-drivers-path}/db2/db2jcc-${db2Ver}.jar" 
+          toDir="${buildBase}/conf_source/db/db2/jdbc" overwrite="true"/>
+
+    <copy file="${internal-drivers-path}/oracle/ojdbc5-${oracleVer}.jar" 
+          toDir="${buildBase}/conf_source/db/oracle/jdbc" overwrite="true"/>
+
+    <copy file="${internal-drivers-path}/sqlserver/sqljdbc-${sqlserverVer}.jar" 
+          toDir="${buildBase}/conf_source/db/sqlserver/jdbc" overwrite="true"/>
+    -->
+
+  </target>
+
+  <target name="ci-remove-jdbc-drivers"
+          depends="init-source-paths"
+          description="Continuous Integration: remove ce and pro jdbc drivers from buildomatic">
+
+    <ci-set-properties/>
+
+    <delete file="${buildBase}/conf_source/db/mysql/jdbc/mysql-connector-java-${mysqlVer}.jar"/>
+
+    <!-- 2011-07-08: it was decided to keep the commercial drivers for now -->
+    <!-- comment out 
+    <delete file="${buildBase}/conf_source/db/db2/jdbc/db2jcc-${db2Ver}.jar"/>
+    <delete file="${buildBase}/conf_source/db/oracle/jdbc/ojdbc5-${oracleVer}.jar"/>
+    <delete file="${buildBase}/conf_source/db/sqlserver/jdbc/sqljdbc-${sqlserverVer}.jar"/>
+    -->
+
+  </target>
+
+  <macrodef name="ci-set-properties">
+    <sequential>
+
+      <!-- the following properties can be overridden by being -->
+      <!-- set in the default_master.properties file           --> 
+
+      <property name="mysqlVer" value="5.1.10"/>
+      <property name="oracleVer" value="11.2.0"/>
+      <property name="sqlserverVer" value="1.6"/>
+      <property name="db2Ver" value="9.5"/>
+
+      <!-- chk for internal-drivers-path property that could come from  --> 
+      <!-- default_master.properties if not already set, then set value --> 
+      <!-- to hardcoded default value for appropriate OS platform       -->
+
+      <if>
+        <isset property="internal-drivers-path" />
+        <then>
+          <echo>ci-set-props: internal-drivers-path is already set </echo>
+          <echo>              internal-drivers-path=${internal-drivers-path} </echo>
+        </then>
+      <else>
+        <if>
+          <equals arg1="${os.name}" arg2="Linux" />
+          <then>
+            <property name="internal-drivers-path" value="/home/devuser/js-builds/eng/internal-drivers"/>
+            <echo>ci-set-props: OS is Linux</echo>
+            <echo>              using hardcoded default property value</echo>
+            <echo>              internal-drivers-path=${internal-drivers-path} </echo>
+          </then>
+          <elseif>
+            <equals arg1="${os.name}" arg2="Windows" />
+            <then>
+              <property name="internal-drivers-path" value="C:/js-builds/eng/internal-drivers"/>
+              <echo>ci-set-props: OS is Windows</echo>
+              <echo>              using hardcoded default property value</echo>
+              <echo>              internal-drivers-path=${internal-drivers-path} </echo>
+            </then>
+          </elseif>
+          <else>
+            <echo>ci-set-props: WARNING: unknown value, os.name=${os.name}</echo>
+            <echo>              WARNING: internal-drivers-path not being set</echo>
+          </else>
+        </if>
+      </else>
+      </if>
+
+    </sequential>
+  </macrodef>
+
+</project>

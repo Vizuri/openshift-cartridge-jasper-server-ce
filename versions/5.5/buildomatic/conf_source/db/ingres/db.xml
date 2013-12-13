@@ -1,0 +1,228 @@
+<project name="db">
+
+    <macrodef name="runIngresCommand">
+        <attribute name="command" />
+        <attribute name="parameters" />
+        <attribute name="dir" default="."/>
+        <attribute name="inputFile" default="nothing" />
+        <attribute name="username" default="${remote.username}" />
+        <attribute name="password" default="${remote.password}" />
+
+        <sequential>
+        <if>
+            <or>
+                <not>
+                    <isset property="dbUsername"/>
+                </not>
+                <equals arg1="${dbPassword}" arg2=""/>
+            </or>
+            <then>
+                <property name="parameterString" value="@{parameters}"/>
+            </then>
+            <else>
+                <property name="parameterString" value="-u${dbUsername} @{parameters}"/>
+            </else>
+        </if>
+
+        <if>
+            <equals arg1="${dbHost}" arg2="localhost" />
+            <then>
+                <if>
+                    <available file="@{inputFile}"/>
+                    <then>
+                        <sequential>
+                            <echo message="--local runIngresCommand-- @{command} ${parameterString} in @{dir} with input file @{inputFile}" />
+
+                            <exec executable="@{command}" dir="@{dir}" failonerror="true" input="@{inputFile}">
+                                <arg line="${parameterString}" />
+                            </exec>
+                        </sequential>
+                    </then>
+                    <else>
+                        <sequential>
+                            <echo message="--local runIngresCommand-- @{command} ${parameterString} in @{dir}" />
+
+                            <exec executable="@{command}" dir="@{dir}" failonerror="true" >
+                                <arg line="${parameterString}" />
+                            </exec>
+                        </sequential>
+                    </else>
+                </if>
+            </then>
+            <else>
+                <sequential>
+                    <echo message="--remote runIngresCommand-- @{command} ${parameterString}" />
+
+                    <sshexec host="${dbHost}" 
+                             username="@{username}" 
+                             password="@{password}"
+                             failonerror="true"
+                             command="@{command} ${parameterString}" />
+                </sequential>
+            </else>
+        </if>
+        </sequential>
+    </macrodef>
+
+    <!-- database tasks -->
+
+    <target name="create-test-user"
+            description="create test user">
+    </target>
+    
+    <target name="drop-js-db" 
+            description="drop repo db">
+        
+        <runIngresCommand command="destroydb" parameters="${js.dbName}"/>
+    </target>
+
+    <target name="create-js-db" 
+            description="create repo db">
+
+        <runIngresCommand command="createdb" parameters="${js.dbName}"/>
+    </target>
+
+    <target name="drop-foodmart-db" 
+            description="drop foodmart db">
+
+        <runIngresCommand command="destroydb" parameters="${foodmart.dbName}"/>
+    </target>
+
+    <target name="create-foodmart-db" 
+            description="create foodmart db">
+
+        <runIngresCommand command="createdb" parameters="${foodmart.dbName}"/>
+    </target>
+
+    <target name="drop-sugarcrm-db" 
+            description="drop sugarcrm db">
+        <runIngresCommand command="destroydb" parameters="${sugarcrm.dbName}"/>
+    </target>
+
+    <target name="create-sugarcrm-db" 
+            description="create sugarcrm db">
+
+        <runIngresCommand command="createdb" parameters="${sugarcrm.dbName}"/>
+    </target>
+
+
+    <target name="init-js-db-pro" 
+            description="run ddl for jasperserver pro db">
+        <runSQL jdbcUrl="${js.jdbcUrl}" print="true">
+            <fileset dir="${currentSqlDir}">
+                <include name="js-pro-create.ddl"/>
+                <include name="quartz.ddl"/>
+            </fileset>
+        </runSQL>
+    </target>
+    
+    <target name="init-js-db-ce" 
+            description="run ddl for jasperserver db">
+        <runSQL jdbcUrl="${js.jdbcUrl}" print="true">
+            <fileset dir="${currentSqlDir}">
+                <include name="js-create.ddl"/>
+                <include name="quartz.ddl"/>
+            </fileset>
+        </runSQL>
+    </target>
+
+    <target name="init-quartz" 
+            description="run ddl for js db">
+        <runSQL jdbcUrl="${js.jdbcUrl}" print="true">
+            <fileset dir="${currentSqlDir}">
+                <include name="quartz.ddl"/>
+            </fileset>
+        </runSQL>
+    </target>
+    
+    <!-- OLD
+    <target name="init-pro-default-security" 
+            description="run default security script">
+
+        <runSQL jdbcUrl="${js.jdbcUrl}" print="true">
+            <fileset dir="${currentSqlDir}">
+                <include name="ji-default-security.sql"/>
+            </fileset>
+        </runSQL>
+    </target>
+    -->
+    
+    <target name="load-foodmart-db"
+            description="load the foodmart database using the Mondrian loader">
+        <echo message="food mart data: ${foodMartData}"/>
+        <echo message="war lib dir: ${warLibDir}"/>
+        <java classname="com.jaspersoft.buildomatic.loader.MondrianFoodMartLoader">
+            <arg value="-tables"/>
+            <arg value="-data"/>
+            <arg value="-indexes"/>
+            <arg value="-jdbcDrivers=${jdbcDriverClass}"/>
+            <arg value="-inputFile=${foodMartData}"/>
+            <arg value="-outputJdbcURL=${foodmart.jdbcUrl}"/>
+            <arg value="-outputJdbcUser=${foodmart.dbUsername}"/>
+            <arg value="-outputJdbcPassword=${foodmart.dbPassword}"/>
+            <arg value="-outputInitFile=${currentDbDir}/supermart-update.sql"/>
+            
+            <classpath>
+                <fileset dir="${basedir}/target" includes="*.jar"/>
+                <fileset dir="${foodJarsDir}" includes="*.jar"/>
+                <fileset dir="${currentDbDir}/jdbc" includes="*.jar"/>
+            </classpath>
+         </java>
+     </target>
+      
+    <target name="update-foodmart-db"
+            description="update foodmart for supermart additions">
+        <runSQL jdbcUrl="${foodmart.jdbcUrl}" print="true">
+            <fileset dir="${currentSqlDir}">
+                <include name="supermart-update.sql"/>
+            </fileset>
+        </runSQL>
+    </target>
+
+
+    <target name="load-sugarcrm-db"
+            description="load sugarcrm database">
+
+        <!-- 
+        
+        <runSQL jdbcUrl="${sugarcrm.jdbcUrl}">
+            <zipentry zipfile="${currentSqlDir}/sugarcrm.zip" name="sugarcrm.sql"/>
+        </runSQL>
+        -->
+
+        <unzip src="${currentSqlDir}/sugarcrm.zip" dest="${basedir}/work" />
+
+        <runIngresCommand command="sql" dir="${basedir}/work" parameters="${sugarcrm.dbName}" inputFile="${basedir}/work/copy.in"/>
+
+        <delete dir="${basedir}/work" />
+    </target>
+
+    <target name="build-js-ddl-ce" 
+            depends="init-source-paths"
+            description="generate hibernate ddl for os">
+        <property name="build-db" value="${js-path}/jasperserver-repository-hibernate/build-db"/>
+        <runmaven dir="${build-db}">
+            <arg value="clean"/>
+            <arg value="install"/>
+        </runmaven>
+        
+        <!-- copy to resources -->
+        <copy file="${build-db}/target/sql/js-drop.ddl" toFile="${currentSqlDir}/js-drop.ddl"/>
+        <copy file="${build-db}/target/sql/js-create.ddl" toFile="${currentSqlDir}/js-create.ddl"/>
+    </target>
+    
+    <target name="build-js-ddl-pro" 
+            depends="init-source-paths"
+            description="generate hibernate ddl">
+        <property name="build-db" value="${js-pro-path}/repository-hibernate/build-db"/>
+        <runmaven dir="${build-db}">
+            <arg value="clean"/>
+            <arg value="install"/>
+        </runmaven>
+        
+        <!-- copy to resources -->
+        <copy file="${build-db}/target/sql/js-pro-drop.ddl" toFile="${currentSqlDir}/js-pro-drop.ddl"/>
+        <copy file="${build-db}/target/sql/js-pro-create.ddl" toFile="${currentSqlDir}/js-pro-create.ddl"/>
+    </target>
+
+</project>
